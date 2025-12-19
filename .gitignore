@@ -1,0 +1,6 @@
+metadata.json
+*.h5
+data2/
+cache/
+organized_data/
+split_data/
