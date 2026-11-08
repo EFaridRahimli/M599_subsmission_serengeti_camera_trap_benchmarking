@@ -42,3 +42,41 @@ azcopy copy \
 "https://lilawildlife.blob.core.windows.net/lila-wildlife/snapshotserengeti-v-2-0/SnapshotSerengeti_S08_v2_0_part1.zip" \
 "./data2/snapshotserengeti-unzipped" \
 --list-from "daytime_training_list.txt"
+```
+
+Download the metadata JSON above alongside the images; the notebook uses it to map each image to its species label.
+
+### 3. Run the benchmark
+
+```bash
+pip install tensorflow pandas numpy matplotlib seaborn scikit-learn jupyter
+jupyter notebook benchmarking.ipynb
+```
+
+The notebook fine-tunes each backbone, logs training to CSV and writes the comparison charts to `imgs/`.
+
+---
+
+## Results
+
+| Accuracy comparison | Per-class accuracy |
+|---|---|
+| ![Accuracy comparison](imgs/accuracy_comparison.png) | ![Per-class accuracy](imgs/per_class_accuracy.png) |
+
+![Confusion matrix](imgs/confusion_matrix.png)
+
+**Takeaway:** MobileNetV2 matches ResNet-50's accuracy with roughly 7× fewer parameters, which makes it the best fit for camera traps running on battery-powered edge hardware.
+
+---
+
+## Repository contents
+
+| Path | Description |
+|------|-------------|
+| `benchmarking.ipynb` | Data pipeline, training and evaluation of all three models |
+| `daytime_training_list.txt` | Curated list of daytime images for the targeted AzCopy download |
+| `vgg19_training_log.csv`, `resnet50_baseline_log.csv`, `mobilenet_baseline_log.csv` | Per-epoch training logs |
+| `imgs/` | Architecture diagrams, accuracy charts and the confusion matrix |
+
+## Tech stack
+Python · TensorFlow/Keras · VGG-19 · ResNet-50 · MobileNetV2 · AzCopy · pandas · scikit-learn
