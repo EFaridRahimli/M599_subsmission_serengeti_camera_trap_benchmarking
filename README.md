@@ -6,13 +6,15 @@ This project implements a **deep learning benchmarking framework** to automatica
 
 ## Performance Summary
 
-Based on experimental results, **MobileNetV2** and **ResNet-50** achieved the highest validation accuracies, while **VGG-19** served as a computationally heavy baseline.
+Validation results from the training logs (`*_log.csv`) and the notebook's classification reports (1,867 validation images). **ResNet-50** and **VGG-19** tie on accuracy, and **MobileNetV2** trades about 2.7 points of accuracy for the fastest inference.
 
-| Model        | Accuracy (%) | Parameters | Loss   | Best Use Case |
-|--------------|--------------|------------|--------|---------------|
-| **MobileNetV2** | **81.09%** | 3.4M  | 0.4987 | Battery-powered edge devices / Real-time inference |
-| **ResNet-50**   | 81.04%     | 25M   | 0.5191 | High-stakes wildlife census requiring maximum robustness |
-| **VGG-19**      | 78.36%     | 144M  | 0.7315 | Legacy research baseline (not recommended for new projects) |
+| Model        | Val. accuracy | Val. loss | Inference (ms/image) | Parameters* | Best use case |
+|--------------|---------------|-----------|----------------------|-------------|---------------|
+| **ResNet-50**   | **81.09%** | **0.6535** | 6.12 | ~25M  | Highest accuracy at moderate cost; wildlife census |
+| **VGG-19**      | 81.04%     | 0.6830 | 7.53 | ~144M | Matches ResNet-50 but slowest and heaviest; research baseline |
+| **MobileNetV2** | 78.36%     | 0.7315 | **5.23** | ~3.4M | Battery-powered edge devices and real-time inference |
+
+\* Standard ImageNet backbone sizes.
 
 ---
 
@@ -65,7 +67,7 @@ The notebook fine-tunes each backbone, logs training to CSV and writes the compa
 
 ![Confusion matrix](imgs/confusion_matrix.png)
 
-**Takeaway:** MobileNetV2 matches ResNet-50's accuracy with roughly 7× fewer parameters, which makes it the best fit for camera traps running on battery-powered edge hardware.
+**Takeaway:** ResNet-50 gives the best accuracy (81.1%) and is faster than VGG-19, which reaches the same accuracy at a much higher cost. MobileNetV2 is the edge option: about 7× smaller and the fastest at inference, for 2.7 points less accuracy.
 
 ---
 
