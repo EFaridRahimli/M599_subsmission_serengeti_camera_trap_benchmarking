@@ -3,4 +3,6 @@ metadata.json
 data2/
 cache/
 organized_data/
-split_data/
+split_data/.ipynb_checkpoints/
+__pycache__/
+.DS_Store

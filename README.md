@@ -1,84 +1,80 @@
-# Snapshot Serengeti Wildlife Classification
+# Serengeti Camera-Trap Benchmark
 
-This project implements a **deep learning benchmarking framework** to automatically classify animal species from the **Snapshot Serengeti (Season 8)** dataset. The study compares three distinct **Convolutional Neural Network (CNN)** architectures—**VGG-19**, **ResNet-50**, and **MobileNetV2**—to evaluate their **classification performance** and **computational efficiency** for ecological monitoring and conservation use cases.
-
----
-
-## Performance Summary
-
-Validation results from the training logs (`*_log.csv`) and the notebook's classification reports (1,867 validation images). **ResNet-50** and **VGG-19** tie on accuracy, and **MobileNetV2** trades about 2.7 points of accuracy for the fastest inference.
-
-| Model        | Val. accuracy | Val. loss | Inference (ms/image) | Parameters* | Best use case |
-|--------------|---------------|-----------|----------------------|-------------|---------------|
-| **ResNet-50**   | **81.09%** | **0.6535** | 6.12 | ~25M  | Highest accuracy at moderate cost; wildlife census |
-| **VGG-19**      | 81.04%     | 0.6830 | 7.53 | ~144M | Matches ResNet-50 but slowest and heaviest; research baseline |
-| **MobileNetV2** | 78.36%     | 0.7315 | **5.23** | ~3.4M | Battery-powered edge devices and real-time inference |
-
-\* Standard ImageNet backbone sizes.
-
----
-
-## Getting Started
-
-### 1. Prerequisites
-
-Ensure the following are installed on your system:
-
-- Python 3.9  
-- TensorFlow / Keras  
-- Microsoft **AzCopy**
-
----
-
-### 2. Data Acquisition (AzCopy)
-
-To optimize storage usage, this project uses a **targeted download strategy**. Instead of downloading the full **~450 GB** Snapshot Serengeti dataset, only **daytime imagery** is retrieved using a curated file list (`daytime_training_list.txt`), reducing the footprint to approximately **17 GB**.
-
-Metadata can be dowloaded from "https://storage.googleapis.com/public-datasets-lila/snapshotserengeti-v-2-0/SnapshotSerengeti_S1-11_v2_1.json.zip"
-
-#### Download Command
-
-```bash
-# Syntax for downloading specific files listed in your .txt file
-azcopy copy \
-"https://lilawildlife.blob.core.windows.net/lila-wildlife/snapshotserengeti-v-2-0/SnapshotSerengeti_S08_v2_0_part1.zip" \
-"./data2/snapshotserengeti-unzipped" \
---list-from "daytime_training_list.txt"
-```
-
-Download the metadata JSON above alongside the images; the notebook uses it to map each image to its species label.
-
-### 3. Run the benchmark
-
-```bash
-pip install tensorflow pandas numpy matplotlib seaborn scikit-learn jupyter
-jupyter notebook benchmarking.ipynb
-```
-
-The notebook fine-tunes each backbone, logs training to CSV and writes the comparison charts to `imgs/`.
-
----
+Compares VGG-19, ResNet-50 and MobileNetV2 (frozen ImageNet backbones, new classifier head) for classifying animal species in Snapshot Serengeti Season 8 camera-trap images.
 
 ## Results
 
-| Accuracy comparison | Per-class accuracy |
+Validation set: 1,867 images, 16 classes, 20 epochs per model. Final-epoch numbers come from the `*_log.csv` files. Inference time is the notebook's batch-of-32 timing on the author's GPU, averaged over 10 batches.
+
+| Model | Val. accuracy | Val. loss | Inference (ms/image) |
+|---|---|---|---|
+| ResNet-50 | 81.09% | 0.6535 | 6.12 |
+| VGG-19 | 81.04% | 0.6830 | 7.53 |
+| MobileNetV2 | 78.36% | 0.7315 | 5.23 |
+
+- ResNet-50 is the best model: highest accuracy, lowest loss, and faster than VGG-19.
+- MobileNetV2 is the fastest but gives up about 2.7 points of accuracy.
+- ResNet-50 per-class results are in the notebook's classification report. Weakest classes by F1: warthog (0.68), wildebeest (0.72), hyena (0.76), empty (0.78).
+
+| Accuracy comparison | Per-class accuracy (ResNet-50) |
 |---|---|
 | ![Accuracy comparison](imgs/accuracy_comparison.png) | ![Per-class accuracy](imgs/per_class_accuracy.png) |
 
-![Confusion matrix](imgs/confusion_matrix.png)
+![Confusion matrix (ResNet-50)](imgs/confusion_matrix.png)
 
-**Takeaway:** ResNet-50 gives the best accuracy (81.1%) and is faster than VGG-19, which reaches the same accuracy at a much higher cost. MobileNetV2 is the edge option: about 7× smaller and the fastest at inference, for 2.7 points less accuracy.
+## Problem
 
----
+Camera traps produce far more images than people can label. This project asks which standard CNN backbone gives the best trade-off between accuracy and inference speed for species classification, including a lightweight option for edge devices.
 
-## Repository contents
+## Data
+
+- Source: Snapshot Serengeti, Season 8 (LILA BC public dataset).
+- Only daytime images are used. `daytime_training_list.txt` lists 21,421 image paths to download.
+- Species labels come from the dataset's metadata JSON. The notebook maps them to 16 classes (for example male, female and cub lion all become `lion`).
+- After filtering, the split is 80/10/10 (seed 42). Training has 14,980 images and validation has 1,867. The test split is created but not evaluated.
+
+## Approach
+
+- Transfer learning: ImageNet-pretrained backbone, frozen, because the dataset is small relative to the backbones and it keeps training cheap.
+- Same head for all three models (global average pooling, Dense 256 ReLU, Dropout 0.5, softmax), so differences come from the backbone.
+- Same training setup for all: Adam, categorical cross-entropy, 224x224 inputs, batch size 32, 20 epochs, each model's own `preprocess_input`.
+- Evaluated on a fixed validation split with accuracy, per-class precision/recall/F1 and a confusion matrix.
+- Latency measured per image on the same validation batches for each model.
+
+## Repo contents
 
 | Path | Description |
-|------|-------------|
-| `benchmarking.ipynb` | Data pipeline, training and evaluation of all three models |
-| `daytime_training_list.txt` | Curated list of daytime images for the targeted AzCopy download |
+|---|---|
+| `benchmarking.ipynb` | Label mapping, split, training, evaluation and timing for all three models |
+| `daytime_training_list.txt` | Daytime image paths used by the notebook (relative to the image root; copy to `data2/` before running) |
 | `vgg19_training_log.csv`, `resnet50_baseline_log.csv`, `mobilenet_baseline_log.csv` | Per-epoch training logs |
-| `imgs/` | Architecture diagrams, accuracy charts and the confusion matrix |
+| `imgs/` | Result charts and model architecture diagrams |
 
-## Tech stack
-Python · TensorFlow/Keras · VGG-19 · ResNet-50 · MobileNetV2 · AzCopy · pandas · scikit-learn
+## How to run
+
+This is notebook-only; there is no script or requirements file.
+
+1. Get the data. The notebook expects these paths:
+   - Images: download the Season 8 image zip file(s) from LILA BC that contain the images in `daytime_training_list.txt`. The repo does not confirm which part zip(s) hold them all; the earlier `part1` name was not verified. Unzip them into `data2/snapshotserengeti-unzipped/`, so that paths such as `data2/snapshotserengeti-unzipped/S8/P06/P06_R3/S8_P06_R3_IMAG1151.JPG` exist. If the archive extracts into an extra top-level folder, move its contents so the `S8/` folder sits directly under `snapshotserengeti-unzipped/`.
+   - Image list: copy `daytime_training_list.txt` into `data2/` (the notebook reads `data2/daytime_training_list.txt`). It has 21,421 lines, one image path each, relative to `snapshotserengeti-unzipped/`.
+   - Metadata: download https://storage.googleapis.com/public-datasets-lila/snapshotserengeti-v-2-0/SnapshotSerengeti_S1-11_v2_1.json.zip, unzip it, and rename the extracted `.json` file to `metadata.json` in the repo root (the notebook reads `metadata.json`).
+
+2. Install packages and open the notebook:
+
+```bash
+pip install tensorflow pandas numpy matplotlib seaborn scikit-learn tqdm split-folders jupyter
+jupyter notebook benchmarking.ipynb
+```
+
+3. The first cell does not import everything the notebook uses. Before running, add: `import numpy as np, pandas as pd, matplotlib.pyplot as plt, seaborn as sns` and `from tensorflow.keras import models, layers, callbacks`.
+
+The download and unzip layout above was not re-run when this README was written; it is inferred from the notebook's paths.
+
+## Limitations and next steps
+
+- Backbones are frozen; fine-tuning the top layers would likely improve accuracy.
+- Single run with one seed and no test-set evaluation, so the 0.05-point gap between ResNet-50 and VGG-19 is not meaningful.
+- Some classes have very few images (leopard has 3 validation images, cheetah 25), so their scores are unreliable. Class balance is uneven.
+- Latency was measured on one GPU with Keras `predict`; edge-device speed was not tested.
+
+Coursework for M599.
